@@ -1,0 +1,9 @@
+{
+  "profiles": {
+    "Ada": {
+      "commandName": "Project",
+      "commandLineArgs": "-t",
+      "workingDirectory": "C:\\Users\\Adrian"
+    }
+  }
+}

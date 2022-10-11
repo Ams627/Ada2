@@ -16,7 +16,7 @@ namespace Ada
         {
             try
             {
-                var dirRegex = new Regex(@"alias\s+(?'name'\w+)\s*=\s*'cd\s+('value'\w+)'", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+                var dirRegex = new Regex(@"alias\s+(?'name'\w+)\s*=\s*'cd\s+(?'value'[^\s].+[^\s])'", RegexOptions.IgnoreCase | RegexOptions.Compiled);
                 if (args.Length == 0)
                 {
                     PrintUsageAndExit();
@@ -26,6 +26,10 @@ namespace Ada
 
                 var folder = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
                 var fullPathToAliasFile = Path.Combine(folder, ".dir-aliases");
+                if (!File.Exists(fullPathToAliasFile))
+                {
+                    File.WriteAllText(fullPathToAliasFile, "");
+                }
 
                 var aliasList = new List<DirectoryAlias>();
                 int lineNumber = 1;
@@ -57,11 +61,13 @@ namespace Ada
                 var deleteOne = optionArgs.Contains('d');
                 var add = optionArgs.Contains('a');
                 var printThis = optionArgs.Contains('t');
+                var listAll = optionArgs.Contains('l');
+                var listAllAliases = optionArgs.Contains('m');
 
-                var r = new[] { replace, deleteOne, add, printThis }.ToLookup(x => x);
-                if (r.Count() > 1)
+                var r = new[] { replace, deleteOne, add, printThis, listAll, listAllAliases }.ToLookup(x => x);
+                if (r[true].Count() > 1)
                 {
-                    throw new Exception("Only one of -r, -a, -d or -t can be supplied.")
+                    throw new Exception("Only one of -r, -a, -d -t, -l, -m can be supplied.");
                 }
 
                 if (replace)
@@ -77,7 +83,7 @@ namespace Ada
                     {
                         Console.Error.WriteLine($"Not a directory alias: {alias}");
                     }
-                    if (normalArgs.Length == 1)
+                    else if (normalArgs.Length == 1)
                     {
                         toReplace.First().Directory = Directory.GetCurrentDirectory();
                         File.WriteAllLines(fullPathToAliasFile, aliasList.Select(x => x.ToString()));
@@ -104,9 +110,10 @@ namespace Ada
                     var toDelete = lk[alias];
                     if (toDelete.Count() == 0)
                     {
-                        Console.Error.WriteLine($"Not a directory alias: {alias}");
+                        throw new Exception($"Not a directory alias: {alias}");
                     }
                     aliasList.Remove(toDelete.First());
+                    File.WriteAllLines(fullPathToAliasFile, aliasList.Select(x => x.ToString()));
                 }
                 else if (add)
                 {
@@ -120,16 +127,29 @@ namespace Ada
                         Alias = normalArgs[0],
                         Directory = directory
                     };
-                    aliasList.Remove(alias);
+                    aliasList.Add(alias);
+                    File.WriteAllLines(fullPathToAliasFile, aliasList.Select(x => x.ToString()));
                 }
                 else if (printThis)
                 {
                     var directory = normalArgs.Length == 0 ? Directory.GetCurrentDirectory() : normalArgs[0];
                     var lk = aliasList.ToLookup(x => x.Directory, StringComparer.OrdinalIgnoreCase);
-                    if (lk.Count() > 0)
+                    if (lk[directory].Count() > 0)
                     {
-                        Console.WriteLine($"{lk[0].First().Directory}");
+                        Console.WriteLine($"{lk[directory].First().Alias}");
                     }
+                }
+                else if (listAll)
+                {
+                    foreach (var alias in aliasList)
+                    {
+                        Console.WriteLine(alias);
+                    }
+                }
+                else if (listAllAliases)
+                {
+                    var print = string.Join(", ", aliasList.Select(x => x.Alias));
+                    Console.WriteLine(print);
                 }
             }
             catch (Exception ex)
@@ -138,7 +158,6 @@ namespace Ada
                 var progname = Path.GetFileNameWithoutExtension(fullname);
                 Console.Error.WriteLine($"{progname} Error: {ex.Message}");
             }
-
         }
 
         private static void PrintUsageAndExit()
