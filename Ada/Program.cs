@@ -12,6 +12,38 @@ namespace Ada
 {
     class Program
     {
+        private static string GetExactPathName(string pathName)
+        {
+            if (!(File.Exists(pathName) || Directory.Exists(pathName)))
+                return pathName;
+
+            var di = new DirectoryInfo(pathName);
+
+            if (di.Parent != null)
+            {
+                return Path.Combine(
+                    GetExactPathName(di.Parent.FullName),
+                    di.Parent.GetFileSystemInfos(di.Name)[0].Name);
+            }
+            return di.FullName.ToUpper();
+        }
+
+
+        private static string Bashify(string dir)
+        {
+            var sb = new StringBuilder();
+            if (dir.Length > 1 && dir[1] == ':' && char.IsLetter(dir[0]))
+            {
+                sb.Append('/');
+                sb.Append(char.ToLower(dir[0]));
+                sb.Append(dir.Substring(2).Replace('\\', '/'));
+            }
+            else
+            {
+                sb.Append(dir.Replace('\\', '/'));
+            }
+            return sb.ToString();
+        }
         private static void Main(string[] args)
         {
             try
@@ -95,7 +127,7 @@ namespace Ada
                         {
                             throw new Exception($"Directory does not exist: {dir}");
                         }
-                        toReplace.First().Directory = dir;
+                        toReplace.First().Directory = GetExactPathName(Bashify(dir));
                         File.WriteAllLines(fullPathToAliasFile, aliasList.Select(x => x.ToString()));
                     }
                 }
@@ -125,7 +157,7 @@ namespace Ada
                     var alias = new DirectoryAlias
                     {
                         Alias = normalArgs[0],
-                        Directory = directory
+                        Directory = GetExactPathName(Bashify(directory))
                     };
                     aliasList.Add(alias);
                     File.WriteAllLines(fullPathToAliasFile, aliasList.Select(x => x.ToString()));
