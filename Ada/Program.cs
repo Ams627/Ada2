@@ -4,13 +4,10 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Xml.Linq;
-using System.Threading.Tasks;
-using System.Threading;
 
 namespace Ada
 {
-    class Program
+    internal class Program
     {
         private static string GetExactPathName(string pathName)
         {
@@ -54,7 +51,7 @@ namespace Ada
                     PrintUsageAndExit();
                 }
                 var normalArgs = args.Where(x => x[0] != '-').ToArray();
-                var optionArgs = args.Where(x => x[0] == '-').SelectMany(x=>x.Skip(1)).ToHashSet();
+                var optionArgs = args.Where(x => x[0] == '-').SelectMany(x => x.Skip(1)).ToHashSet();
 
                 var folder = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
                 var fullPathToAliasFile = Path.Combine(folder, ".dir-aliases");
@@ -65,7 +62,7 @@ namespace Ada
 
                 var aliasList = new List<DirectoryAlias>();
                 int lineNumber = 1;
-                foreach (var line in File.ReadLines(fullPathToAliasFile).Select(x=>x.Trim()))
+                foreach (var line in File.ReadLines(fullPathToAliasFile).Select(x => x.Trim()))
                 {
                     if (line == string.Empty)
                     {
@@ -117,7 +114,7 @@ namespace Ada
                     }
                     else if (normalArgs.Length == 1)
                     {
-                        toReplace.First().Directory = Directory.GetCurrentDirectory();
+                        toReplace.First().Directory = GetExactPathName(Bashify(Directory.GetCurrentDirectory()));
                         File.WriteAllLines(fullPathToAliasFile, aliasList.Select(x => x.ToString()));
                     }
                     else
